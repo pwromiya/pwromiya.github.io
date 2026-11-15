@@ -6,35 +6,26 @@
   var stoneCanvas = makeStone();
   var waterCanvas = makeWater();
   var sandCanvas = makeSand();
+  var gl = null;
+  var programs = null;
+  var maps = null;
+  var shared = null;
 
   function createView(canvas) {
     var alpha = canvas.getAttribute("data-alpha") === "1";
-    var gl = canvas.getContext("webgl", { antialias: true, alpha: alpha, premultipliedAlpha: false });
-    if (!gl) return null;
     var frameEl = canvas.closest(".view");
-    var programs = {
-      lit: program(gl, litVert, litFrag),
-      line: program(gl, lineVert, lineFrag)
-    };
-    if (!programs.lit || !programs.line) return null;
     var view = {
-      gl: gl,
       canvas: canvas,
       frame: frameEl,
       kind: canvas.getAttribute("data-scene"),
       alpha: alpha,
-      programs: programs,
       colors: themeColors(),
       time: 0,
       userYaw: 0,
       paused: false,
       visible: true,
-      maps: {
-        stone: texture(gl, stoneCanvas),
-        water: texture(gl, waterCanvas),
-        sand: texture(gl, sandCanvas)
-      },
-      batches: null
+      batches: null,
+      ctx: null
     };
     view.batches = buildScene(view.kind);
     upload(view);
@@ -107,7 +98,6 @@
   }
 
   function draw(view) {
-    var gl = view.gl;
     var mini = view.kind.indexOf("mini-") === 0;
     var angle = view.userYaw;
     if (!reduced && mini) angle = view.time * 0.9;
@@ -148,14 +138,14 @@
       paint(view, batch, batch.spin ? yaw : still, viewProj, eye);
     });
     gl.depthMask(true);
+    present(view);
   }
 
   function paint(view, batch, model, viewProj, eye) {
-    var gl = view.gl;
     var mvp = multiply(viewProj, model);
-    disableAttribs(gl, view);
+    disableAttribs(gl);
     if (batch.mode === "line") {
-      var line = view.programs.line;
+      var line = programs.line;
       gl.useProgram(line.program);
       gl.bindBuffer(gl.ARRAY_BUFFER, batch.buffer);
       bindAttrib(gl, line, "aPos", 3, 12, 0);
@@ -165,7 +155,7 @@
       gl.drawArrays(gl.LINES, 0, batch.count);
       return;
     }
-    var lit = view.programs.lit;
+    var lit = programs.lit;
     gl.useProgram(lit.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, batch.buffer);
     var stride = 8 * 4;
@@ -186,14 +176,13 @@
     gl.uniform1f(lit.uUseMap, batch.map ? 1 : 0);
     if (batch.map) {
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, view.maps[batch.map]);
+      gl.bindTexture(gl.TEXTURE_2D, maps[batch.map]);
       gl.uniform1i(lit.uMap, 0);
     }
     gl.drawArrays(gl.TRIANGLES, 0, batch.count);
   }
 
   function upload(view) {
-    var gl = view.gl;
     view.batches.forEach(function (batch) {
       batch.buffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, batch.buffer);
@@ -205,10 +194,20 @@
     var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     var width = Math.max(1, Math.floor(view.canvas.clientWidth * dpr));
     var height = Math.max(1, Math.floor(view.canvas.clientHeight * dpr));
+    if (shared.width !== width || shared.height !== height) {
+      shared.width = width;
+      shared.height = height;
+    }
     if (view.canvas.width !== width || view.canvas.height !== height) {
       view.canvas.width = width;
       view.canvas.height = height;
     }
+  }
+
+  function present(view) {
+    if (!view.ctx) view.ctx = view.canvas.getContext("2d", { alpha: true });
+    view.ctx.clearRect(0, 0, view.canvas.width, view.canvas.height);
+    view.ctx.drawImage(shared, 0, 0, view.canvas.width, view.canvas.height);
   }
 
   function buildScene(kind) {
@@ -1018,8 +1017,8 @@
     gl.vertexAttribPointer(loc, size, gl.FLOAT, false, stride, offset);
   }
 
-  function disableAttribs(gl, view) {
-    [view.programs.lit, view.programs.line].forEach(function (shaderLoc) {
+  function disableAttribs(gl) {
+    [programs.lit, programs.line].forEach(function (shaderLoc) {
       ["aPos", "aNormal", "aUv"].forEach(function (name) {
         if (shaderLoc[name] >= 0) gl.disableVertexAttribArray(shaderLoc[name]);
       });
@@ -1153,6 +1152,28 @@
   function clampByte(value) {
     return Math.max(0, Math.min(255, value));
   }
+
+  shared = document.createElement("canvas");
+  shared.setAttribute("aria-hidden", "true");
+  shared.style.cssText = "position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0.02;pointer-events:none;z-index:-1";
+  document.body.appendChild(shared);
+  gl = shared.getContext("webgl", {
+    antialias: true,
+    alpha: true,
+    premultipliedAlpha: false,
+    preserveDrawingBuffer: true
+  });
+  if (!gl) return;
+  programs = {
+    lit: program(gl, litVert, litFrag),
+    line: program(gl, lineVert, lineFrag)
+  };
+  if (!programs.lit || !programs.line) return;
+  maps = {
+    stone: texture(gl, stoneCanvas),
+    water: texture(gl, waterCanvas),
+    sand: texture(gl, sandCanvas)
+  };
 
   var views = [];
   canvases.forEach(function (canvas) {

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="D-REM">
+  <rect width="128" height="128" fill="#0c2340"/>
+  <path fill="#e2b340" d="M18 28h34c22 0 36 12 36 32 0 14-8 24-20 29l18 19h-22l-16-18H36v18H18V28zm18 16v22h14c8 0 14-4 14-11s-6-11-14-11H36z"/>
+  <path fill="#f0cb63" d="M78 34c16-8 34 2 36 16 2 12-6 22-16 26 8 4 14 12 14 22 0 16-14 26-32 26H62V34h16zm-2 16h-8v14h8c6 0 10-3 10-7s-4-7-10-7zm2 30h-10v16h12c7 0 12-4 12-8s-6-8-14-8z"/>
+  <circle cx="48" cy="58" r="4" fill="#0c2340"/>
+  <circle cx="86" cy="70" r="4" fill="#0c2340"/>
+  <path fill="#e2b340" d="M46 96l-6 22h8l4-22h-6zm22 0l2 22h8l-4-22h-6z"/>
+</svg>

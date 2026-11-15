@@ -11,14 +11,12 @@
     var alpha = canvas.getAttribute("data-alpha") === "1";
     var gl = canvas.getContext("webgl", { antialias: true, alpha: alpha, premultipliedAlpha: false });
     if (!gl) return null;
-    var host = canvas.closest(".view-host");
     var frameEl = canvas.closest(".view");
     var programs = {
       lit: program(gl, litVert, litFrag),
       line: program(gl, lineVert, lineFrag)
     };
     if (!programs.lit || !programs.line) return null;
-    if (host) host.classList.add("is-3d");
     var view = {
       gl: gl,
       canvas: canvas,
